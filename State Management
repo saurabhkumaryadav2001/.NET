@@ -1,0 +1,245 @@
+State management means storing and maintaining user-specific data between multiple HTTP requests.
+Why do we need it?
+HTTP is a stateless protocol.
+
+For example:
+1. User logs in.
+2. Server validates username and password.
+3. User opens another page.
+4. Server doesn't automatically remember the previous request.
+So we need State Management to maintain user information across requests.
+2. Types of State Management in .NET Core
+ASP.NET Core provides different ways to maintain state.
+Client-side State Management
+
+
+Cookies
+
+Query String
+
+Hidden Fields (MVC/Razor)
+
+
+Server-side State Management
+
+
+Session
+
+In-Memory Cache
+
+Distributed Cache (Redis)
+
+
+3. Session Management (Most Important)
+Session stores user-specific information on the server and identifies the session using a session ID stored in a cookie.
+Example: Store user ID after login
+Step 1: Configure Session in Program.cs
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddDistributedMemoryCache();
+
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromMinutes(20);
+    options.Cookie.HttpOnly = true;
+});
+
+var app = builder.Build();
+
+app.UseRouting();
+
+app.UseSession();
+
+app.MapControllers();
+
+app.Run();
+
+
+Step 2: Store value in Session
+HttpContext.Session.SetString("UserName", "Saurabh");
+HttpContext.Session.SetInt32("UserId", 101);
+
+
+Step 3: Retrieve Session value
+var name = HttpContext.Session.GetString("UserName");
+
+var userId = HttpContext.Session.GetInt32("UserId");
+
+
+Step 4: Remove Session
+HttpContext.Session.Remove("UserName");
+
+
+Clear all session data:
+HttpContext.Session.Clear();
+
+
+How Session works internally?
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+5
+
+
+
+
+
+
+
+
+
+
+1. User sends request.
+2. Server creates session.
+3. Server generates Session ID.
+4. Session ID is stored in browser cookie.
+5. Browser sends the same cookie with future requests.
+6. Server identifies the session and retrieves its data.
+Important: Session data is stored server-side, not directly in the browser.
+4. Cookies
+Cookies store small pieces of data in the user's browser.
+Example
+HttpContext.Response.Cookies.Append(
+    "UserName",
+    "Saurabh"
+);
+
+
+Read Cookie:
+var username = HttpContext.Request.Cookies["UserName"];
+
+
+Delete Cookie:
+HttpContext.Response.Cookies.Delete("UserName");
+
+
+Use cases:
+- Remember user preferences
+- Remember language selection
+- Store session identifiers
+5. Query String
+Data is passed through the URL.
+
+Example:
+https://example.com/products?id=101
+
+
+Controller:
+[HttpGet]
+public IActionResult GetProduct(int id)
+{
+    return Ok(id);
+}
+
+
+Here, id = 101 is received from the query string.
+
+Use cases:
+- Pagination
+- Filtering
+- Search parameters
+6. Cache Management
+Caching stores frequently accessed data to improve performance.
+In-Memory Cache
+Data is stored inside the application's memory.
+builder.Services.AddMemoryCache();
+
+
+Example:
+public class ProductService
+{
+    private readonly IMemoryCache _cache;
+
+    public ProductService(IMemoryCache cache)
+    {
+        _cache = cache;
+    }
+
+    public string GetProduct()
+    {
+        return _cache.GetOrCreate("Product", entry =>
+        {
+            entry.AbsoluteExpirationRelativeToNow =
+                TimeSpan.FromMinutes(10);
+
+            return "Laptop";
+        });
+    }
+}
+
+
+Distributed Cache (Redis)
+Data is stored in a distributed caching system like Redis.
+builder.Services.AddStackExchangeRedisCache(options =>
+{
+    options.Configuration = "localhost:6379";
+    options.InstanceName = "MyApp:";
+});
+
+
+Use cases:
+- Multiple API instances
+- Distributed session storage
+- Shared caching across servers
+7. Session vs Cache vs Cookies
+Feature	Session	Cache	Cookie
+Storage	Server	Server/cache server	Browser
+Purpose	User state	Performance	Client state
+User-specific	Usually	Depends on key	Usually
+Expiration	Idle timeout	Configurable	Configurable
+Shared across servers	With distributed storage	With Redis	Browser sends it
+
+8. Interview Questions
+Q1. What is State Management in ASP.NET Core?
+
+State management is the process of maintaining user or application data across multiple HTTP requests because HTTP is stateless.
+
+Q2. What is the difference between Session and Cache?
+
+Session stores user-specific information across requests, while Cache stores data temporarily to improve application performance.
+
+Q3. Is Session available in ASP.NET Core by default?
+
+No. We need to configure session services using AddSession() and middleware using UseSession().
+
+Q4. What is Distributed Cache?
+
+Distributed cache stores data outside an individual application server, allowing multiple application instances to access shared cached data.
+
+Q5. Which is better: Session or JWT?
+
+They solve different problems:
+- Session: maintains server-side user state.
+- JWT: carries signed authentication claims and is commonly used for stateless API authentication.
+
+9. Real-world .NET Core example
+Suppose you are building an HRMS application:
+Requirement	State Management
+Remember login session	Session or authentication cookie
+Store employee preferences	Cookie or database
+Store JWT token	Usually client-side storage/cookie depending on architecture
+Cache department master data	IMemoryCache or Redis
+Maintain shopping cart	Session or database
+Share cache across API servers	Redis
+
+My recommendation for interviews: Learn Session, Cookies, IMemoryCache, Redis, and JWT differences properly.
+
+I can also teach you the next important topic:
+ Session Management in depth Cache and Redis in depth JWT vs Session
