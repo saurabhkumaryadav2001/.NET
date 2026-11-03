@@ -1,0 +1,389 @@
+Custom Attribute in .NET
+
+A Custom Attribute is a way to add extra information (metadata) to your code, such as a class, method, property, or parameter.
+
+You can create your own attribute using a class that inherits from Attribute.
+Real-life example
+Suppose you want to mark some API methods as:
+- AdminOnly
+- LogActivity
+- ValidateUser
+Instead of writing this information separately, you can attach a custom attribute directly to the method.
+2. Create your own Custom Attribute
+Let's create a simple example.
+Step 1: Create Custom Attribute
+using System;
+
+[AttributeUsage(AttributeTargets.Method)]
+public class LogAttribute : Attribute
+{
+    public string Message { get; }
+
+    public LogAttribute(string message)
+    {
+        Message = message;
+    }
+}
+
+
+Explanation:
+- Attribute → Base class for creating custom attributes.
+- AttributeUsage → Defines where the attribute can be applied.
+- AttributeTargets.Method → Attribute can be applied only to methods.
+- Message → Stores the message passed to the attribute.
+Step 2: Apply Custom Attribute
+public class EmployeeService
+{
+    [Log("Employee created")]
+    public void CreateEmployee()
+    {
+        Console.WriteLine("Employee Created");
+    }
+}
+
+
+Here, [Log("Employee created")] attaches metadata to the CreateEmployee() method.
+3. How to Read Custom Attribute using Reflection
+Now suppose we want to read the attribute.
+using System;
+using System.Reflection;
+
+class Program
+{
+    static void Main()
+    {
+        MethodInfo method = typeof(EmployeeService)
+            .GetMethod("CreateEmployee")!;
+
+        var attribute = method.GetCustomAttribute<LogAttribute>();
+
+        if (attribute != null)
+        {
+            Console.WriteLine(attribute.Message);
+        }
+    }
+}
+
+
+Output:
+Employee created
+
+
+We used Reflection to read the attribute at runtime. Custom attributes store metadata; your code or framework must read that metadata to perform an action. 
+Microsoft Learn+1
+
+4. Real-world ASP.NET Core example
+You already use these attributes in .NET APIs!
+[HttpGet]
+[Authorize]
+public IActionResult GetEmployees()
+{
+    return Ok();
+}
+
+
+Attribute	Meaning
+[HttpGet]	API handles GET requests
+[Authorize]	Requires authorization
+[HttpPost]	API handles POST requests
+[AllowAnonymous]	Allows access without authentication
+[Route]	Defines API route
+
+These are framework-provided attributes, not custom ones.
+5. Interview Answer (Simple)
+Question: What is a Custom Attribute in C#?
+
+Answer:
+
+"Custom attributes are used to add metadata to classes, methods, properties, or other program elements. We create custom attributes by inheriting from the System.Attribute class. We can read these attributes at runtime using Reflection and use them for validation, logging, authorization, or other custom behavior."
+Important difference
+- Attribute = Metadata attached to code.
+- Reflection = Technique used to inspect metadata at runtime.
+- Custom Attribute = Attribute that you create yourself.
+For official documentation: Microsoft Learn – Creating Custom Attributes
+
+I can also explain how custom attributes work internally in ASP.NET Core using a real API example, which is very useful for .NET interviews.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Real-life example
+Suppose you want to mark some API methods as:
+- AdminOnly
+- LogActivity
+- ValidateUser
+Instead of writing this information separately, you can attach a custom attribute directly to the method. give me example
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Let's understand with a real ASP.NET Core Web API example.
+
+Suppose you have an Employee API and you want to:
+1. Allow only Admin users to delete employees.
+2. Log whenever an API is called.
+3. Validate whether the employee ID is valid.
+We can create custom attributes for these requirements.
+1. AdminOnly Custom Attribute
+Create attribute
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Filters;
+
+public class AdminOnlyAttribute : ActionFilterAttribute
+{
+    public override void OnActionExecuting(
+        ActionExecutingContext context)
+    {
+        var role = context.HttpContext
+            .User
+            .FindFirst("Role")?.Value;
+
+        if (role != "Admin")
+        {
+            context.Result = new ForbidResult();
+        }
+    }
+}
+
+
+Use it in Controller
+[ApiController]
+[Route("api/[controller]")]
+public class EmployeeController : ControllerBase
+{
+    [HttpDelete("{id}")]
+    [AdminOnly]
+    public IActionResult DeleteEmployee(int id)
+    {
+        return Ok("Employee deleted");
+    }
+}
+
+
+What happens?
+- Admin calls DELETE API → API executes.
+- Non-Admin calls DELETE API → Request is forbidden.
+Note: In a real application, use ASP.NET Core's built-in [Authorize(Roles = "Admin")] for role authorization. This example demonstrates custom attributes.
+2. LogActivity Custom Attribute
+Suppose you want to log which API is called.
+Create attribute
+using Microsoft.AspNetCore.Mvc.Filters;
+
+public class LogActivityAttribute : ActionFilterAttribute
+{
+    public override void OnActionExecuting(
+        ActionExecutingContext context)
+    {
+        Console.WriteLine(
+            $"API Called: {context.ActionDescriptor.DisplayName}");
+    }
+}
+
+
+Apply attribute
+[HttpGet]
+[LogActivity]
+public IActionResult GetEmployees()
+{
+    return Ok("Employee List");
+}
+
+
+Output in console:
+API Called: EmployeeController.GetEmployees
+
+
+Whenever this API is called, the filter executes.
+
+3. ValidateUser Custom Attribute
+Suppose you want to validate the Employee ID before executing the API.
+Create attribute
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Filters;
+
+public class ValidateUserAttribute : ActionFilterAttribute
+{
+    public override void OnActionExecuting(
+        ActionExecutingContext context)
+    {
+        if (context.ActionArguments.TryGetValue(
+                "id", out var value)
+            && value is int id
+            && id <= 0)
+        {
+            context.Result = new BadRequestObjectResult(
+                "Invalid Employee ID");
+        }
+    }
+}
+
+
+Apply attribute
+[HttpGet("{id}")]
+[ValidateUser]
+public IActionResult GetEmployee(int id)
+{
+    return Ok($"Employee ID: {id}");
+}
+
+
+If ID is 0 or negative, API returns Bad Request.
+
+4. One API with multiple Custom Attributes
+[HttpDelete("{id}")]
+[AdminOnly]
+[LogActivity]
+[ValidateUser]
+public IActionResult DeleteEmployee(int id)
+{
+    return Ok("Employee deleted");
+}
+
+
+Here, one API has three attributes:
+- [AdminOnly] → Admin access check
+- [LogActivity] → Log API execution
+- [ValidateUser] → Validate employee ID
+Important: ActionFilterAttribute is used here because we want attributes to execute logic before an API action. A normal custom attribute inheriting only Attribute does not automatically execute logic.
+Interview question
+Q: What is the difference between a normal Custom Attribute and an Action Filter Attribute?
+- Attribute → Stores metadata.
+- ActionFilterAttribute → Can execute logic before and after a controller action.
+- Reflection → Reads metadata from attributes.
+This is a very practical concept in ASP.NET Core.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+pls can u give e simple code explample to explain the custom attribute in simple word
+
+
+
+
+
+
+
+
+
+
+
+
+
+Sure! Let's understand Custom Attribute with the simplest C# example, without ASP.NET Core.
+1. Create a Custom Attribute
+using System;
+
+public class MyAttribute : Attribute
+{
+    public string Message;
+
+    public MyAttribute(string message)
+    {
+        Message = message;
+    }
+}
+
+
+Here:
+- MyAttribute → Our custom attribute.
+- : Attribute → Means we are creating an attribute.
+- Message → Stores some information.
+2. Apply Custom Attribute to a Method
+class Employee
+{
+    [MyAttribute("This is Employee Method")]
+    public void GetEmployee()
+    {
+        Console.WriteLine("Employee Method Called");
+    }
+}
+
+
+Here:
+[MyAttribute("This is Employee Method")]
+
+
+We are attaching extra information to the GetEmployee() method.
+3. Read the Attribute
+using System;
+using System.Reflection;
+
+class Program
+{
+    static void Main()
+    {
+        Employee emp = new Employee();
+
+        emp.GetEmployee();
+
+        MethodInfo method = typeof(Employee)
+            .GetMethod("GetEmployee");
+
+        MyAttribute attr =
+            method.GetCustomAttribute<MyAttribute>();
+
+        Console.WriteLine(attr.Message);
+    }
+}
+
+
+Output
+Employee Method Called
+This is Employee Method
+
+
+4. Understand in Simple Words
+Imagine:
+[MyAttribute("Important Method")]
+public void GetEmployee()
+{
+}
+
+
+You are basically putting a label on a method.
+- Method = GetEmployee
+- Label = Important Method
+- Custom Attribute = Mechanism to attach that label
+- Reflection = Mechanism to read that label
+Interview definition:
+
+"Custom Attribute in C# is used to attach additional metadata to classes, methods, or properties. We create it by inheriting from the Attribute class and read it using Reflection."
+
+If you want, I can next explain this with an even simpler real-life example like [Developer("Saurabh")] that will make it very easy to remember in interviews.
